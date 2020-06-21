@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html>
+<body>
+
+<div style="width:512px;height:384px;overflow:scroll;">
+    <canvas id="myCanvas" width="512" height="384" style="border:1px solid #d3d3d3;">
+        Your browser does not support the HTML5 canvas tag.
+    </canvas>
+</div>
+<button id="up">增大</button><button id="down">减小</button><button id="cancel">撤销</button><button id="clear">清空</button>
+<script>
+const c=document.getElementById("myCanvas");
+const ctx=c.getContext("2d");
+const scaleStep=1.05;
+const minWidth=512,minHeight=384,maxWidth=9000,maxHeight=7000;
+const img=document.createElement('img');
+const elementWidth=512,elementHeight=384;
+let startx,//起始x坐标
+    starty,//起始y坐标
+    flag,//是否点击鼠标的标志
+    x,
+    y,
+    leftDistance,
+    topDistance,
+    op=0,//op操作类型 0 无操作 1 画矩形框 2 拖动矩形框
+    scale=1,
+	type=0;
+let layers=[];//图层
+let block;
+let currentR;//当前点击的矩形框
+img.src='xxx.png';
+img.onload=function(){
+    c.style.backgroundImage="url("+img.src+")";
+    c.style.backgroundSize=`${c.width}px ${c.height}px`;
+}
+document.querySelector('#up').onclick=function(){
+	if(c.width<=maxWidth&&c.height<=maxHeight){
+		c.width*=scaleStep;
+		c.height*=scaleStep;
+		scale=c.height/minHeight;
+		ctx.scale(scale,scale)
+		c.style.backgroundSize=`${c.width}px ${c.height}px`;
+		reshow()
+	}
+}
+document.querySelector('#down').onclick=function(){
+	if(c.width>=minWidth&&c.height>=minHeight){
+		c.width/=scaleStep;
+		c.height/=scaleStep;
+		scale=c.height/minHeight;
+		ctx.scale(scale,scale);
+        c.style.backgroundSize=`${c.width}px ${c.height}px`;
+		reshow();
+	}
+    
+}
+document.querySelector('#cancel').onclick=function(){
+    layers.pop();
+	ctx.clearRect(0,0,elementWidth,elementHeight);
+    reshow();
+}
+document.querySelector('#clear').onclick=function(){
+    layers=[];
+	ctx.clearRect(0,0,elementWidth,elementHeight);
+    reshow();
+}
+
+function reshow(x,y){
+    if (block!=null) {
+        ctx.beginPath();
+        ctx.rect(block.x1,block.y1,block.width,block.height);
+        ctx.strokeStyle='#0000ff'
+        ctx.stroke();
+    }
+    if(flag&&op<3){
+        op=1
+    }
+	
+}
+function render(rect){
+    c.style.cursor="default";
+    if(flag&&op==0){op=1;}
+}
+
+function fixPosition(position){
+    if(position.x1>position.x2){
+        let x=position.x1;
+        position.x1=position.x2;
+        position.x2=x;
+    }
+    if(position.y1>position.y2){
+        let y=position.y1;
+        position.y1=position.y2;
+        position.y2=y;
+    }
+    position.width=position.x2-position.x1
+    position.height=position.y2-position.y1
+
+    return position
+}
+let mousedown=function(e){
+    layers.pop();
+    startx=(e.pageX-c.offsetLeft+c.parentElement.scrollLeft)/scale;
+    starty=(e.pageY-c.offsetTop+c.parentElement.scrollTop)/scale;
+    if(currentR){
+        leftDistance=startx-currentR.x1;
+        topDistance=starty-currentR.y1;
+    }
+    ctx.strokeRect(x,y,0,0);
+    ctx.strokeStyle="#0000ff";
+    flag=1;
+}
+let mousemove=function(e){
+    x=(e.pageX-c.offsetLeft+c.parentElement.scrollLeft)/scale;
+    y=(e.pageY-c.offsetTop+c.parentElement.scrollTop)/scale;
+    ctx.save();
+    ctx.setLineDash([5])
+    c.style.cursor="default";
+    ctx.clearRect(0,0,elementWidth,elementHeight)
+    if(flag&&op==1){
+        ctx.strokeRect(startx,starty,x-startx,y-starty);
+    }
+    ctx.restore();
+    reshow(x,y);
+}
+let mouseup=function(e){
+    if(op==1){
+
+        block=fixPosition({
+            x1:startx,
+            y1:starty,
+            x2:x,
+            y2:y,
+			strokeStyle:'#0000ff',
+			type:type
+        })
+    }else if(op>=3){
+		fixPosition(currentR)
+	}
+    ctx.save();
+    ctx.clearRect(0,0,elementWidth,elementHeight)
+    ctx.restore();
+	currentR=null;
+    flag=0;
+    reshow(x,y);
+    op=0;
+}
+c.onmouseleave=function(){
+    c.onmousedown=null;
+    c.onmousemove=null;
+    c.onmouseup=null;
+}
+c.onmouseenter=function(){
+    c.onmousedown=mousedown;
+    c.onmousemove=mousemove;
+    document.onmouseup=mouseup;
+}
+</script>
+
+</body>
+</html>
